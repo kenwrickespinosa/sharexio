@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Signup() {
   const [isDateOpen, setIsDateOpen] = useState(false);
@@ -28,10 +28,41 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log({ firstname, lastname, date, gender, email, password });
+    const credentials = {
+      firstname,
+      lastname,
+      gender,
+      birthdate: date,
+      email,
+      password,
+    };
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to login");
+      }
+
+      localStorage.setItem("token", data.token);
+      navigate("/home")
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -67,16 +98,19 @@ function Signup() {
               <Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
                 <PopoverTrigger asChild>
                   <Button className="bg-white text-black border w-36 md:w-72 cursor-pointer hover:bg-neutral-50">
-                    {date ? date.toLocaleDateString() : "Select Date"}
+                    {date ? date : "Select Date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent>
                   <Calendar
                     mode="single"
-                    selected={date}
+                    selected={date ? new Date(date) : undefined}
                     captionLayout="dropdown"
                     onSelect={(date) => {
-                      setDate(date);
+                      if (!date) return;
+
+                      const formatted = date.toISOString().split("T")[0];
+                      setDate(formatted);
                       setIsDateOpen(false);
                     }}
                   />
@@ -92,9 +126,9 @@ function Signup() {
                 <SelectContent>
                   <SelectGroup className="w-36 md:w-72">
                     <SelectLabel>Select your gender</SelectLabel>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="binary">Binary</SelectItem>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Binary">Binary</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -120,7 +154,7 @@ function Signup() {
               />
             </span>
           </div>
-          <Button>Sign Up</Button>
+          <Button type="submit" className="cursor-pointer">Sign Up</Button>
         </div>
       </form>
       <div>
